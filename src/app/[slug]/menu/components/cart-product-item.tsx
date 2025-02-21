@@ -48,7 +48,7 @@ const CartProductItem = ({ product }: CartProductItemProps) => {
 			<Button
 				className="h-7 w-7 rounded-lg"
 				variant="outline"
-				onClick={() => removeProduct(product.id)}
+                onClick={() => removeProduct(product.id)}
 			>
 				<TrashIcon />
 			</Button>
