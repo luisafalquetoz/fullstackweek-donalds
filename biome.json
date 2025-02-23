@@ -22,7 +22,8 @@
 			"style": {
 				"useImportType": "off",
 				"useNumberNamespace": "off",
-				"noParameterAssign":"off"
+				"noParameterAssign":"off",
+				"noNonNullAssertion": "off"
 			},
 			"suspicious": {
 				"noExplicitAny": "off"

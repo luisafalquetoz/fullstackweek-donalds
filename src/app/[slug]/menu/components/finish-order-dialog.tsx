@@ -24,19 +24,30 @@ import {
 	FormMessage,
 } from '@/components/ui/form';
 
-import {PatternFormat} from 'react-number-format'
 import { Input } from '@/components/ui/input';
+import { PatternFormat } from 'react-number-format';
 import { isValidCPF } from '../helpers/cpf';
+import { ConsumptionMethod } from '@prisma/client';
+import { createOrder } from '../actions/create-order';
+import { useParams, useSearchParams } from 'next/navigation';
+import { useContext, useTransition } from 'react';
+import { CartContext } from '../contexts/cart';
+import { toast } from 'sonner';
+import { Loader2Icon } from 'lucide-react';
 
 const formSchema = z.object({
 	name: z.string().trim().min(1, {
 		message: 'O nome é obrigatório.',
 	}),
-	cpf: z.string().trim().min(1, {
-		message: 'O CPF é obrigatório.'
-	}).refine((value) => isValidCPF(value), {
-		message: 'CPF inválido',
-	}),
+	cpf: z
+		.string()
+		.trim()
+		.min(1, {
+			message: 'O CPF é obrigatório.',
+		})
+		.refine((value) => isValidCPF(value), {
+			message: 'CPF inválido',
+		}),
 });
 
 type FormSchema = z.infer<typeof formSchema>;
@@ -46,7 +57,11 @@ interface FinishOrderDialogProps {
 	onOpenChange: (open: boolean) => void;
 }
 
-const FinishOrderDialog = ({open, onOpenChange}: FinishOrderDialogProps) => {
+const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
+	const {slug} = useParams<{slug: string}>();
+	const {products} = useContext(CartContext)
+	const searchParams = useSearchParams();
+	const [isPending, startTransition] = useTransition();
 	const form = useForm<FormSchema>({
 		resolver: zodResolver(formSchema),
 		defaultValues: {
@@ -55,20 +70,33 @@ const FinishOrderDialog = ({open, onOpenChange}: FinishOrderDialogProps) => {
 		},
 		shouldUnregister: true,
 	});
-	const onSubmit = (data: FormSchema) => {
-		console.log(data);
+	const onSubmit = async (data: FormSchema) => {
+		try {
+			const consumptionMethod = searchParams.get('consumptionMethod') as ConsumptionMethod;
+			startTransition(async () => {  
+				await createOrder({
+					consumptionMethod,
+					customerCpf: data.cpf,  
+					customerName: data.name,
+					products, 
+					slug, 
+				});
+				onOpenChange(false);
+			toast.success('Pedido finalizado com sucesso!');
+			})
+		} catch (error) {
+			console.error(error);
+		}
 	};
 
 	return (
 		<Drawer open={open} onOpenChange={onOpenChange}>
-			<DrawerTrigger asChild>
-				
-			</DrawerTrigger>
+			<DrawerTrigger asChild> </DrawerTrigger>
 			<DrawerContent>
 				<DrawerHeader>
-					<DrawerTitle>Finalizar Pedido</DrawerTitle>
+					<DrawerTitle>Confirmar Pedido</DrawerTitle>
 					<DrawerDescription>
-						Insira suas informações abaixo para finalizar o seu pedido.
+						Insira suas informações abaixo para confirmar o seu pedido.
 					</DrawerDescription>
 				</DrawerHeader>
 				<div className="p-5">
@@ -94,16 +122,31 @@ const FinishOrderDialog = ({open, onOpenChange}: FinishOrderDialogProps) => {
 									<FormItem>
 										<FormLabel>Seu CPF</FormLabel>
 										<FormControl>
-											<PatternFormat placeholder="Digite seu CPF..." format='###.###.###-##' customInput={Input} {...field} />
+											<PatternFormat
+												placeholder="Digite seu CPF..."
+												format="###.###.###-##"
+												customInput={Input}
+												{...field}
+											/>
 										</FormControl>
 										<FormMessage />
 									</FormItem>
 								)}
 							/>
 							<DrawerFooter>
-								<Button type="submit" variant='destructive' className='rounded-full'>Finalizar</Button>
-								<DrawerClose>
-									<Button variant="outline" className='w-full rounded-full'>Cancelar</Button>
+								<Button
+									type="submit"
+									variant="destructive"
+									className="rounded-full"
+									disabled={isPending}
+								>
+									{isPending && <Loader2Icon className='animate-spin' /> }
+									Confirmar
+								</Button>
+								<DrawerClose asChild>
+									<Button variant="outline" className="w-full rounded-full">
+										Cancelar
+									</Button>
 								</DrawerClose>
 							</DrawerFooter>
 						</form>
