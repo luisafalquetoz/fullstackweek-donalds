@@ -3,6 +3,7 @@
 import { db } from '@/lib/prisma';
 import { ConsumptionMethod } from '@prisma/client';
 import { removeCpfPunctuation } from '../helpers/cpf';
+import { redirect } from 'next/navigation';
 
 interface CreateOrderInput {
 	customerName: string;
@@ -16,14 +17,14 @@ interface CreateOrderInput {
 }
 
 export const createOrder = async (input: CreateOrderInput) => {
-    const restaurant = await db.restaurant.findUnique({
-        where: {
-            slug: input.slug,
-        }
-    })
-    if (!restaurant) {
-        throw new Error('Restaurant not found');
-    }
+	const restaurant = await db.restaurant.findUnique({
+		where: {
+			slug: input.slug,
+		},
+	});
+	if (!restaurant) {
+		throw new Error('Restaurant not found');
+	}
 	const productWithPrices = await db.product.findMany({
 		where: {
 			id: {
@@ -50,8 +51,9 @@ export const createOrder = async (input: CreateOrderInput) => {
 				(acc, product) => acc + product.price * product.quantity,
 				0,
 			),
-            consumptionMethod: input.consumptionMethod,
-            restaurantId: restaurant.id,
+			consumptionMethod: input.consumptionMethod,
+			restaurantId: restaurant.id,
 		},
 	});
+	redirect(`/${input.slug}/orders`)
 };
